@@ -1,0 +1,18 @@
+{
+  "description": "爬宠管家 uni-app 多端项目",
+  "packOptions": {
+    "ignore": []
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "latest",
+  "appid": "touristappid",
+  "projectname": "ReptileDiary-app",
+  "miniprogramRoot": "dist/build/mp-weixin/",
+  "condition": {}
+}

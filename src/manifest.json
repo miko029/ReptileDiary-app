@@ -1,0 +1,37 @@
+{
+  "name": "爬宠管家",
+  "appid": "__UNI__REPTILE_DIARY",
+  "description": "爬宠饲养记录多端应用",
+  "versionName": "0.2.0",
+  "versionCode": "20",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {},
+      "ios": {}
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": true
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "爬宠管家",
+    "router": {
+      "mode": "hash"
+    }
+  }
+}
