@@ -1,6 +1,6 @@
 # 爬宠管家多端应用
 
-这是一个基于 **uni-app + Vue3 + TypeScript** 的多端项目，不包含 Coze 相关配置。
+这是一个基于 **uni-app + Vue3 + TypeScript** 的多端项目
 
 ## 支持端
 
