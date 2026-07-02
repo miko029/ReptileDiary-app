@@ -4,9 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import type { FeedingStatus, Pet } from '@/types'
 import { diffDays } from '@/utils/date'
 import { getFeedingStatus, getStatusClass } from '@/utils/feeding'
-import { getFeedingRecords, getPets } from '@/utils/store'
+import { getCabinetLocationText, getFeedingRecords, getPets } from '@/utils/store'
 
-type PetView = Pet & { categoryInitial: string; feedingStatus: FeedingStatus; statusClass: string; daysSinceLast: string }
+type PetView = Pet & { categoryInitial: string; feedingStatus: FeedingStatus; statusClass: string; daysSinceLast: string; locationText: string }
 
 const filters = ['全部', '健康', '待观察', '异常', '待喂食', '已逾期']
 const activeFilter = ref('全部')
@@ -37,11 +37,13 @@ const refresh = () => {
       feedingStatus,
       statusClass: getStatusClass(feedingStatus),
       daysSinceLast: days === '' ? '未记录' : `${days} 天前`,
+      locationText: getCabinetLocationText(pet),
     }
   })
 }
 
 const goAdd = () => uni.navigateTo({ url: '/pages/pet-form/pet-form' })
+const goCabinets = () => uni.navigateTo({ url: '/pages/cabinet-management/cabinet-management' })
 const goDetail = (petId: string) => uni.navigateTo({ url: `/pages/pet-detail/pet-detail?id=${petId}` })
 
 onShow(refresh)
@@ -56,6 +58,11 @@ onShow(refresh)
       </view>
       <button class="add-mini" @tap="goAdd">+</button>
     </view>
+
+    <button class="cabinet-entry card" @tap="goCabinets">
+      <text>爬柜管理</text>
+      <text>维护爬柜和柜位 ›</text>
+    </button>
 
     <input v-model="keyword" class="input search" placeholder="搜索名称、品种或基因" />
 
@@ -88,6 +95,7 @@ onShow(refresh)
       </view>
       <view class="pet-meta">
         <text>性别：{{ pet.sex }}</text>
+        <text>位置：{{ pet.locationText }}</text>
         <text>上次喂食：{{ pet.daysSinceLast }}</text>
         <text>下次：{{ pet.nextFeedingDate || '待设置' }}</text>
       </view>
@@ -97,6 +105,23 @@ onShow(refresh)
 
 <style scoped>
 .page-head { margin-bottom: 24rpx; }
+.cabinet-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 18rpx;
+  padding: 22rpx 24rpx;
+  color: #25211d;
+  font-size: 28rpx;
+  font-weight: 700;
+  text-align: left;
+}
+.cabinet-entry text:last-child {
+  color: #8b8177;
+  font-size: 24rpx;
+  font-weight: 500;
+}
 .add-mini {
   width: 76rpx;
   height: 76rpx;
@@ -164,7 +189,7 @@ onShow(refresh)
 }
 .pet-meta {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12rpx;
   margin-top: 22rpx;
   color: #756b60;

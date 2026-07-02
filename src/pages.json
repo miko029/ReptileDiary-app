@@ -37,6 +37,12 @@
       }
     },
     {
+      "path": "pages/cabinet-management/cabinet-management",
+      "style": {
+        "navigationBarTitleText": "爬柜管理"
+      }
+    },
+    {
       "path": "pages/health-management/health-management",
       "style": {
         "navigationBarTitleText": "健康管理"

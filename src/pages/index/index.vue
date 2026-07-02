@@ -4,9 +4,9 @@ import { onShow } from '@dcloudio/uni-app'
 import type { FeedingStatus, Pet } from '@/types'
 import { formatDate, getWeekDays, todayString } from '@/utils/date'
 import { getFeedingStatus, getStatusClass, isDueOrOverdue } from '@/utils/feeding'
-import { addFeedingRecord, getFeedingRecords, getPets } from '@/utils/store'
+import { addFeedingRecord, getCabinetLocationText, getFeedingRecords, getPets } from '@/utils/store'
 
-type PetView = Pet & { categoryInitial: string; feedingStatus: FeedingStatus; statusClass: string }
+type PetView = Pet & { categoryInitial: string; feedingStatus: FeedingStatus; statusClass: string; locationText: string }
 
 const today = ref(todayString())
 const pets = ref<PetView[]>([])
@@ -32,6 +32,7 @@ const refresh = () => {
       categoryInitial: pet.category.slice(0, 1),
       feedingStatus,
       statusClass: getStatusClass(feedingStatus),
+      locationText: getCabinetLocationText(pet),
     }
   })
   weekDays.value = getWeekDays().map(day => ({
@@ -108,6 +109,7 @@ onShow(refresh)
             <text class="tag" :class="pet.statusClass">{{ pet.feedingStatus }}</text>
           </view>
           <text class="caption">{{ pet.species || pet.category }} · 上次 {{ pet.lastFeedingDate || '未记录' }}</text>
+          <text class="caption">位置 {{ pet.locationText }}</text>
           <text class="caption">下次喂食 {{ pet.nextFeedingDate || '待设置' }}</text>
         </view>
         <button class="feed-btn" @tap.stop="quickFeed(pet)">打卡</button>

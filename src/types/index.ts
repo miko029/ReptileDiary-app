@@ -19,8 +19,25 @@ export interface Pet {
   lastFeedingDate: string
   nextFeedingDate: string
   healthStatus: HealthStatus
+  cabinetId: string
+  cabinetSlotId: string
   notes: string
   photoUrl: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CabinetSlot {
+  id: string
+  name: string
+  notes: string
+}
+
+export interface ReptileCabinet {
+  id: string
+  name: string
+  slots: CabinetSlot[]
+  notes: string
   createdAt: string
   updatedAt: string
 }

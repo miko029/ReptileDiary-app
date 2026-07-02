@@ -1,4 +1,4 @@
-import type { FeedingRecord, HealthRecord, HealthStatus, Pet, UserSettings } from '@/types'
+import type { FeedingRecord, HealthRecord, HealthStatus, Pet, ReptileCabinet, UserSettings } from '@/types'
 import { calculateNextFeedingDate, normalizePetSchedule } from './feeding'
 import { addDays, todayString } from './date'
 
@@ -6,6 +6,7 @@ const PETS_KEY = 'reptile_diary_pets'
 const FEEDING_KEY = 'reptile_diary_feeding_records'
 const HEALTH_KEY = 'reptile_diary_health_records'
 const SETTINGS_KEY = 'reptile_diary_settings'
+const CABINETS_KEY = 'reptile_diary_cabinets'
 
 const nowIso = () => new Date().toISOString()
 const id = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`
@@ -44,6 +45,8 @@ export const ensureSeedData = () => {
       lastFeedingDate: addDays(today, -3),
       nextFeedingDate: today,
       healthStatus: '健康',
+      cabinetId: 'cabinet_demo_1',
+      cabinetSlotId: 'slot_demo_1',
       notes: '食欲稳定，偏爱杜比亚。',
       photoUrl: '',
       createdAt: `${addDays(today, -70)}T10:00:00.000Z`,
@@ -62,6 +65,8 @@ export const ensureSeedData = () => {
       lastFeedingDate: addDays(today, -9),
       nextFeedingDate: addDays(today, -2),
       healthStatus: '待观察',
+      cabinetId: 'cabinet_demo_1',
+      cabinetSlotId: 'slot_demo_2',
       notes: '最近活动减少，喂食时多观察。',
       photoUrl: '',
       createdAt: `${addDays(today, -130)}T10:00:00.000Z`,
@@ -105,16 +110,47 @@ export const ensureSeedData = () => {
     },
   ]
 
+  const cabinets: ReptileCabinet[] = [
+    {
+      id: 'cabinet_demo_1',
+      name: 'A 号爬柜',
+      slots: [
+        { id: 'slot_demo_1', name: 'A1', notes: '' },
+        { id: 'slot_demo_2', name: 'A2', notes: '' },
+        { id: 'slot_demo_3', name: 'A3', notes: '' },
+      ],
+      notes: '客厅东侧',
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    },
+  ]
+
   write(PETS_KEY, pets)
   write(FEEDING_KEY, feedingRecords)
   write(HEALTH_KEY, healthRecords)
+  write(CABINETS_KEY, cabinets)
   write(SETTINGS_KEY, defaultSettings)
 }
 
-export const getPets = (): Pet[] => read<Pet[]>(PETS_KEY, []).map(normalizePetSchedule)
+const normalizePet = (pet: Pet): Pet =>
+  normalizePetSchedule({
+    ...pet,
+    cabinetId: pet.cabinetId || '',
+    cabinetSlotId: pet.cabinetSlotId || '',
+  })
+
+export const getPets = (): Pet[] => read<Pet[]>(PETS_KEY, []).map(normalizePet)
 export const getPetById = (petId: string): Pet | undefined => getPets().find(pet => pet.id === petId)
 export const getFeedingRecords = (): FeedingRecord[] => read<FeedingRecord[]>(FEEDING_KEY, [])
 export const getHealthRecords = (): HealthRecord[] => read<HealthRecord[]>(HEALTH_KEY, [])
+export const getCabinets = (): ReptileCabinet[] => read<ReptileCabinet[]>(CABINETS_KEY, [])
+
+export const getCabinetLocationText = (pet: Pick<Pet, 'cabinetId' | 'cabinetSlotId'>, fallback = '未设置位置'): string => {
+  const cabinet = getCabinets().find(item => item.id === pet.cabinetId)
+  if (!cabinet) return fallback
+  const slot = cabinet.slots.find(item => item.id === pet.cabinetSlotId)
+  return slot ? `${cabinet.name} · ${slot.name}` : cabinet.name
+}
 
 export const getSettings = (): UserSettings => ({ ...defaultSettings, ...read<UserSettings>(SETTINGS_KEY, defaultSettings) })
 export const saveSettings = (settings: UserSettings) => write(SETTINGS_KEY, settings)
@@ -137,6 +173,8 @@ export const savePet = (payload: Partial<Pet> & Pick<Pet, 'name' | 'category' | 
     lastFeedingDate,
     nextFeedingDate: calculateNextFeedingDate(lastFeedingDate, Number(payload.feedingCycleDays)),
     healthStatus: payload.healthStatus || current?.healthStatus || '健康',
+    cabinetId: payload.cabinetId || '',
+    cabinetSlotId: payload.cabinetSlotId || '',
     notes: payload.notes || '',
     photoUrl: payload.photoUrl || '',
     createdAt,
@@ -151,6 +189,28 @@ export const deletePetCascade = (petId: string) => {
   write(PETS_KEY, getPets().filter(pet => pet.id !== petId))
   write(FEEDING_KEY, getFeedingRecords().filter(record => record.petId !== petId))
   write(HEALTH_KEY, getHealthRecords().filter(record => record.petId !== petId))
+}
+
+export const saveCabinet = (payload: Partial<ReptileCabinet> & Pick<ReptileCabinet, 'name' | 'slots'>): ReptileCabinet => {
+  const cabinets = getCabinets()
+  const current = payload.id ? cabinets.find(cabinet => cabinet.id === payload.id) : undefined
+  const cabinet: ReptileCabinet = {
+    id: payload.id || id('cabinet'),
+    name: payload.name.trim(),
+    slots: payload.slots
+      .filter(slot => slot.name.trim())
+      .map(slot => ({ id: slot.id || id('slot'), name: slot.name.trim(), notes: slot.notes || '' })),
+    notes: payload.notes || '',
+    createdAt: current?.createdAt || nowIso(),
+    updatedAt: nowIso(),
+  }
+  write(CABINETS_KEY, current ? cabinets.map(item => (item.id === cabinet.id ? cabinet : item)) : [cabinet, ...cabinets])
+  return cabinet
+}
+
+export const deleteCabinet = (cabinetId: string) => {
+  write(CABINETS_KEY, getCabinets().filter(cabinet => cabinet.id !== cabinetId))
+  write(PETS_KEY, getPets().map(pet => (pet.cabinetId === cabinetId ? { ...pet, cabinetId: '', cabinetSlotId: '', updatedAt: nowIso() } : pet)))
 }
 
 export const addFeedingRecord = (petId: string, feedingDate = todayString(), notes = '', foodType = '常规喂食', foodAmount: number | '' = '') => {

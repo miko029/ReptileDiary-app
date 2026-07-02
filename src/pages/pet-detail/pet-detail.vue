@@ -4,7 +4,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import type { FeedingRecord, HealthRecord, Pet } from '@/types'
 import { todayString } from '@/utils/date'
 import { getFeedingStatus, getStatusClass } from '@/utils/feeding'
-import { addFeedingRecord, deletePetCascade, getFeedingRecords, getHealthRecords, getPetById } from '@/utils/store'
+import { addFeedingRecord, deletePetCascade, getCabinetLocationText, getFeedingRecords, getHealthRecords, getPetById } from '@/utils/store'
 
 const id = ref('')
 const pet = ref<Pet | null>(null)
@@ -14,6 +14,7 @@ const healthRecords = ref<HealthRecord[]>([])
 const categoryInitial = computed(() => pet.value?.category.slice(0, 1) || '')
 const feedingStatus = computed(() => pet.value ? getFeedingStatus(pet.value, feedingRecords.value) : '')
 const statusClass = computed(() => getStatusClass(feedingStatus.value as any))
+const locationText = computed(() => pet.value ? getCabinetLocationText(pet.value) : '')
 
 const refresh = () => {
   const current = getPetById(id.value)
@@ -85,6 +86,7 @@ onShow(refresh)
         </view>
         <text class="hero-meta">{{ pet.category }} · {{ pet.species || '未填写品种' }} · {{ pet.sex }}</text>
         <text class="hero-meta">{{ pet.morph || '未填写基因' }}</text>
+        <text class="hero-meta">位置：{{ locationText }}</text>
       </view>
     </view>
 
@@ -111,6 +113,7 @@ onShow(refresh)
 
     <view class="card info-card section">
       <text class="section-title">基础档案</text>
+      <view class="info-row"><text>饲养位置</text><text>{{ locationText }}</text></view>
       <view class="info-row"><text>购入日期</text><text>{{ pet.purchaseDate || '未记录' }}</text></view>
       <view class="info-row"><text>出生日期</text><text>{{ pet.birthDate || '未记录' }}</text></view>
       <view class="info-row"><text>备注</text><text>{{ pet.notes || '无' }}</text></view>
