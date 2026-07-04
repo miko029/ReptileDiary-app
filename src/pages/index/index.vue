@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import type { FeedingStatus, Pet } from '@/types'
+import type { FeedingStatus, Pet, ReptileCabinet } from '@/types'
 import { formatDate, getWeekDays, todayString } from '@/utils/date'
 import { getFeedingStatus, getStatusClass, isDueOrOverdue } from '@/utils/feeding'
-import { addFeedingRecord, getCabinetLocationText, getFeedingRecords, getPets } from '@/utils/store'
+import { addCabinetFeedingRecords, addFeedingRecord, getCabinetLocationText, getCabinets, getFeedingRecords, getPets } from '@/utils/store'
 
 type PetView = Pet & { categoryInitial: string; feedingStatus: FeedingStatus; statusClass: string; locationText: string }
 
 const today = ref(todayString())
 const pets = ref<PetView[]>([])
+const cabinets = ref<ReptileCabinet[]>([])
+const selectedCabinetIndex = ref(0)
 const weekDays = ref<Array<{ date: string; day: number; week: string; count: number; fedCount: number; isToday: boolean }>>([])
 
 const dateText = computed(() => formatDate(today.value))
 const duePets = computed(() => pets.value.filter(pet => isDueOrOverdue(pet.feedingStatus)))
+const cabinetOptions = computed(() => cabinets.value.map(cabinet => cabinet.name))
+const selectedCabinet = computed(() => cabinets.value[selectedCabinetIndex.value])
+const selectedCabinetPets = computed(() => selectedCabinet.value ? pets.value.filter(pet => pet.cabinetId === selectedCabinet.value.id) : [])
+const selectedCabinetPendingPets = computed(() => selectedCabinetPets.value.filter(pet => pet.feedingStatus !== '今日已喂'))
 const stats = computed(() => ({
   total: pets.value.length,
   healthy: pets.value.filter(pet => pet.healthStatus === '健康').length,
@@ -24,6 +30,8 @@ const stats = computed(() => ({
 const refresh = () => {
   today.value = todayString()
   const sourcePets = getPets()
+  cabinets.value = getCabinets()
+  if (selectedCabinetIndex.value >= cabinets.value.length) selectedCabinetIndex.value = 0
   const records = getFeedingRecords()
   pets.value = sourcePets.map(pet => {
     const feedingStatus = getFeedingStatus(pet, records, today.value)
@@ -52,6 +60,34 @@ const quickFeed = (pet: PetView) => {
       if (!result.confirm) return
       addFeedingRecord(pet.id)
       uni.showToast({ title: '打卡成功', icon: 'success' })
+      refresh()
+    },
+  })
+}
+
+const changeCabinet = (index: number) => {
+  selectedCabinetIndex.value = index
+}
+
+const batchFeedCabinet = () => {
+  const cabinet = selectedCabinet.value
+  if (!cabinet) {
+    uni.showToast({ title: '请先创建爬柜', icon: 'none' })
+    return
+  }
+  if (selectedCabinetPets.value.length === 0) {
+    uni.showToast({ title: '该爬柜暂无宠物', icon: 'none' })
+    return
+  }
+
+  uni.showModal({
+    title: '按爬柜打卡',
+    content: `确认今天已喂食 ${cabinet.name} 内 ${selectedCabinetPendingPets.value.length} 只未打卡宠物吗？`,
+    confirmText: '批量打卡',
+    success: result => {
+      if (!result.confirm) return
+      const summary = addCabinetFeedingRecords(cabinet.id)
+      uni.showToast({ title: summary.added ? `已打卡 ${summary.added} 只` : '今天已全部打卡', icon: 'success' })
       refresh()
     },
   })
@@ -87,6 +123,24 @@ onShow(refresh)
       <button class="quick-action" @tap="goPets">宠物列表</button>
       <button class="quick-action" @tap="goCalendar">喂食日历</button>
       <button class="quick-action primary" @tap="goAddPet">添加宠物</button>
+    </view>
+
+    <view class="batch-card card">
+      <view class="between batch-head">
+        <view>
+          <text class="section-title">按爬柜喂食打卡</text>
+          <text class="caption">一次记录整个爬柜今天已喂。</text>
+        </view>
+        <text class="tag tag-blue">{{ selectedCabinetPets.length }} 只</text>
+      </view>
+      <picker :range="cabinetOptions" :value="selectedCabinetIndex" :disabled="cabinets.length === 0" @change="changeCabinet(Number($event.detail.value))">
+        <view class="picker-line" :class="{ disabled: cabinets.length === 0 }">{{ selectedCabinet?.name || '暂无爬柜' }}</view>
+      </picker>
+      <view class="batch-meta">
+        <text class="caption">未打卡 {{ selectedCabinetPendingPets.length }} 只</text>
+        <text class="caption">已打卡 {{ selectedCabinetPets.length - selectedCabinetPendingPets.length }} 只</text>
+      </view>
+      <button class="primary-btn batch-btn" @tap="batchFeedCabinet">整柜打卡</button>
     </view>
 
     <view class="section">
@@ -206,6 +260,36 @@ onShow(refresh)
 .quick-action.primary {
   background: #2f7d63;
   color: #ffffff;
+}
+.batch-card {
+  margin-top: 18rpx;
+  padding: 26rpx;
+}
+.batch-head {
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+.picker-line {
+  min-height: 78rpx;
+  box-sizing: border-box;
+  padding: 0 24rpx;
+  border-radius: 16rpx;
+  background: #f6f1ea;
+  color: #25211d;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 78rpx;
+}
+.picker-line.disabled {
+  color: #aaa29a;
+}
+.batch-meta {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 14rpx;
+}
+.batch-btn {
+  margin-top: 22rpx;
 }
 .section-head {
   margin-bottom: 18rpx;

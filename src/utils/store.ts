@@ -227,6 +227,38 @@ export const addFeedingRecord = (petId: string, feedingDate = todayString(), not
   write(PETS_KEY, getPets().map(item => (item.id === petId ? { ...item, lastFeedingDate: feedingDate, nextFeedingDate: nextDate, updatedAt: nowIso() } : item)))
 }
 
+export const addCabinetFeedingRecords = (cabinetId: string, feedingDate = todayString(), notes = '按爬柜批量打卡', foodType = '常规喂食') => {
+  const pets = getPets()
+  const records = getFeedingRecords()
+  const cabinetPets = pets.filter(pet => pet.cabinetId === cabinetId)
+  const targetPets = cabinetPets.filter(pet => !records.some(record => record.petId === pet.id && record.feedingDate === feedingDate))
+  const createdAt = nowIso()
+
+  if (targetPets.length === 0) {
+    return { total: cabinetPets.length, added: 0, skipped: cabinetPets.length }
+  }
+
+  const newRecords: FeedingRecord[] = targetPets.map(pet => ({
+    id: id('feed'),
+    petId: pet.id,
+    feedingDate,
+    foodType,
+    foodAmount: '',
+    notes,
+    createdAt,
+  }))
+  const targetIds = new Set(targetPets.map(pet => pet.id))
+
+  write(FEEDING_KEY, [...newRecords, ...records])
+  write(PETS_KEY, pets.map(pet => (
+    targetIds.has(pet.id)
+      ? { ...pet, lastFeedingDate: feedingDate, nextFeedingDate: calculateNextFeedingDate(feedingDate, pet.feedingCycleDays), updatedAt: createdAt }
+      : pet
+  )))
+
+  return { total: cabinetPets.length, added: targetPets.length, skipped: cabinetPets.length - targetPets.length }
+}
+
 export const addHealthRecord = (payload: Omit<HealthRecord, 'id' | 'createdAt'>) => {
   const record: HealthRecord = { ...payload, id: id('health'), createdAt: nowIso() }
   write(HEALTH_KEY, [record, ...getHealthRecords()])
